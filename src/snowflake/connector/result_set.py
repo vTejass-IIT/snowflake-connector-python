@@ -182,6 +182,21 @@ class ResultSet(Iterable[list]):
         return self._create_iter(
             iter_unit=IterUnit.TABLE_UNIT, structure="pandas", **kwargs
         )
+    
+    def _fetch_pandas_batches_in_size(self, batch_size, **kwargs) ->Iterator[DataFrame]:
+        """Fetches Pandas dataframes in batches, where batch refers to Snowflake Chunk.
+        batch_size: Size of each batch for retrieving results.
+        """
+        batches_dataframes = self._fetch_pandas_batches(**kwargs)
+        batch = []
+        for df in batches_dataframes:
+            batch.append(df)
+            if len(batch) == batch_size:
+                yield batch
+                batch = []
+        if batch:
+            yield batch
+
 
     def _fetch_pandas_all(self, **kwargs) -> DataFrame:
         """Fetches a single Pandas dataframe."""

@@ -1354,6 +1354,20 @@ class SnowflakeCursor:
         )
         return self._result_set._fetch_pandas_batches(**kwargs)
 
+    def fetch_pandas_batches_in_size(self, batch_size: int, **kwargs: Any) -> Iterator[DataFrame]:
+        """Fetches batches of specified size from the Arrow Table."""
+        self.check_can_use_pandas()
+        if self._prefetch_hook is not None:
+            self._prefetch_hook()
+        if self._query_result_format != "arrow":
+            raise NotSupportedError
+        self._log_telemetry_job_data(
+            TelemetryField.PANDAS_FETCH_BATCHES_IN_SIZE, TelemetryData.TRUE
+        )
+        # Pass the batch_size argument to fetch_pandas_batches_in_size
+        return self._result_set._fetch_pandas_batches_in_size(batch_size=batch_size, **kwargs)
+
+
     def fetch_pandas_all(self, **kwargs: Any) -> DataFrame:
         """Fetch Pandas dataframes in batches, where 'batch' refers to Snowflake Chunk."""
         self.check_can_use_pandas()

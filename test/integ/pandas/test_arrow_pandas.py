@@ -1392,3 +1392,34 @@ def test_fetch_with_pandas_nullable_types(conn_cnx):
         df = cursor_table.fetch_pandas_all(types_mapper=dtype_mapping.get)
         pandas._testing.assert_series_equal(df.dtypes, expected_dtypes)
         assert df.to_string() == expected_df_to_string
+
+
+def test_fetch_pandas_batches_with_batch_size(conn_cnx):
+    # Sample test data
+    sample_test_data = [
+        {"id": 1, "name": "Alice", "age": 25},
+        {"id": 2, "name": "Bob", "age": 30},
+        {"id": 3, "name": "Charlie", "age": 28},
+    ]
+
+    # Create a table and insert the sample data
+    with conn_cnx() as cnx:
+        cnx.cursor().execute("CREATE OR REPLACE TABLE sample_table (id INT, name STRING, age INT)")
+        cnx.cursor().executemany(
+            "INSERT INTO sample_table (id, name, age) VALUES (%s, %s, %s)",
+            [(record["id"], record["name"], record["age"]) for record in sample_test_data],
+        )
+
+    # Fetch data in batches using the Snowflake connector
+    with conn_cnx() as cnx:
+        with cnx.cursor() as cur:
+            print(cur)
+            cur.execute("SELECT * FROM sample_table")
+            fetched_data = cur.fetch_pandas_batches_in_size(batch_size=2)
+
+            # Check the number of batches and content of the first batch
+            num_batches = sum(1 for _ in fetched_data)
+            first_batch = next(fetched_data, None)
+
+            assert num_batches == 2  # Expected number of batches based on batch size
+            assert len(first_batch) == 2  # Expected number of rows in the first batch
